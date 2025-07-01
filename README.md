@@ -1,36 +1,22 @@
-## Spring Boot Reactive Redis Batch Elasticsearch
+## Mocking Bulk Payment With Spring Boot Batch
 
-This project demonstrates how to use Spring Boot with Reactive Redis and Elasticsearch to perform batch operations. It
-includes a simple REST API to interact with the data.
+### Overview
 
-```shell
-curl --location 'localhost:10000/api/v1/batches/upload' \
---form 'file=@"test.xlsx"' \
---form 'batchOwnerName="Testing"'
-```
+This project showcases a bulk payment system built with Spring Boot. It leverages Spring Batch for processing, Quartz
+for scheduling, RabbitMQ for messaging, and PostgreSQL as the database.
 
-To confirm a batch, you can use the following endpoint:
+The system exposes a REST API that allows users to upload a CSV file containing payment details to initiate mock bulk
+payments. Confirmed payments are persisted in the database, and a scheduled job periodically processes these payments in
+batches. After processing, the system updates the status and related information for each payment record.
 
-```http request
-POST /api/v1/batches/{ID}/confirm
-```
+### Technologies Used
 
-This will confirm the batch with ID, from staging to production table.
-
-To migrate data from PostgreSQL to Elasticsearch, you can use the provided migration endpoint.
-
-```http request
-GET /api/v1/batches/migration
-```
-
-To retrieve all batch records, you can use the following endpoint:
-
-```http request
-GET /api/v1/batches/{ID}/records
-```
-
-To search for customer codes using a fuzzy search, you can use the following endpoint:
-
-```http request
-POST /api/v1/batches/fuzzy-search?searchTerm=search
-```
+- **SB Webflux**: For building reactive web applications.
+- **Spring Batch**: For batch processing of payment records.
+- **Quartz**: For scheduling batch jobs.
+- **RabbitMQ**: For messaging and communication between downstream and upstream.
+- **PostgreSQL**: For data persistence.
+- **Redis**: For caching and temporary data storage.
+- **Docker**: For containerization of the application.
+- **Grafana Stack**: For monitoring and visualization (Grafana, Prometheus).
+- **ELK Stack**: For logging and monitoring (Elasticsearch, Logstash, Kibana).
