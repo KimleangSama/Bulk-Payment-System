@@ -1,0 +1,141 @@
+services:
+  postgres:
+    image: postgres:17.2
+    container_name: postgres
+    restart: on-failure
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: demo
+      TZ: Asia/Phnom_Penh
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d demo -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command: postgres -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_connections=200
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+  redis:
+    image: redis/redis-stack-server:6.2.6-v19
+    container_name: redis
+    restart: on-failure
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+  rabbitmq:
+    image: rabbitmq:3.13.7-management-alpine
+    container_name: rabbitmq
+    restart: on-failure
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+  elasticsearch:
+    image: elastic/elasticsearch:9.0.3
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./docker/elk/es.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - ./data/elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      node.name: elasticsearch
+      cluster.name: docker-cluster
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: elastic
+      discovery.type: single-node
+      http.port: 9200
+      http.cors.allow-origin: http://localhost:1358, http://127.0.0.1:1358
+      http.cors.enabled: true
+      http.cors.allow-headers: X-Requested-With,X-Auth-Token,Content-Type,Content-Length,Authorization
+      http.cors.allow-credentials: true
+      xpack.security.enabled: true
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:9200', '-u', 'elastic:elastic' ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  logstash:
+    image: elastic/logstash:9.0.3
+    container_name: logstash
+    volumes:
+      - ./docker/elk/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
+      - ./docker/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro,Z
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: -Xms256m -Xmx256m
+      LOGSTASH_INTERNAL_PASSWORD: logstash
+      ELASTIC_PASSWORD: elastic
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+  kibana:
+    image: elastic/kibana:9.0.3
+    container_name: kibana
+    volumes:
+      - ./docker/elk/kibana.yml:/usr/share/kibana/config/kibana.yml:ro,Z
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      KIBANA_SYSTEM_PASSWORD: kibana
+    healthcheck:
+      test: [ 'CMD', 'curl', '-f', 'http://localhost:5601' ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+  kibana_settings:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    image: elastic/elasticsearch:9.0.3
+    container_name: kibana_settings
+    restart: 'no'
+    command: >
+      bash -c '
+        echo "Setup the kibana_system password";
+        start_time=$$(date +%s);
+        timeout=60;
+        until curl -s -u "elastic:elastic" -X POST http://elasticsearch:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibana\"}" -H "Content-Type: application/json" | grep -q "^{}"; do
+          if [ $$(($$(date +%s) - $$start_time)) -ge $$timeout ]; then
+            echo "Error: Elasticsearch timeout";
+            exit 1;
+          fi;
+          sleep 2;
+        done;
+      '
+  apm-server:
+    image: elastic/apm-server:9.0.3
+    container_name: apm-server
+    ports:
+      - "8200:8200"
+    command: >
+      -e
+      -E output.elasticsearch.hosts=["http://elasticsearch:9200"]
+      -E output.elasticsearch.username=elastic
+      -E output.elasticsearch.password=elastic
+      -E apm-server.host=0.0.0.0:8200
+      -E apm-server.secret_token=xxVpmQB2HMzCL9PgBHVrnxjNXXw5J7bd79DFm6sjBJR5HPXDhcF8MSb3vv4bpg44
+      -E setup.kibana.host=kibana:5601
+      -E setup.template.enabled=true
+      -E logging.to_files=false
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    restart: unless-stopped

@@ -1,0 +1,125 @@
+databaseUrl: ${BATCH_DATASOURCE_URL:postgresql://localhost:5432/demo}
+
+server:
+  port: ${SERVER_PORT:10000}
+
+spring:
+  application:
+    name: batch-service
+  main:
+    web-application-type: REACTIVE # SERVLET, REACTIVE
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local} # value local,dev,uat,prod
+  data:
+    r2dbc:
+      repositories:
+        enabled: true
+
+spring.batch:
+  job:
+    enabled: false
+  jdbc:
+    initialize-schema: always
+
+spring.r2dbc:
+  url: r2dbc:${databaseUrl}
+  username: ${BATCH_DATABASE_USERNAME:postgres}
+  password: ${BATCH_DATABASE_PASSWORD:postgres}
+  pool:
+    enabled: true # Requires r2dbc-pool
+    initial-size: 5
+    min-idle: 5
+    max-size: 20
+    max-idle-time: 10m
+    max-life-time: 45m
+    validation-query: SELECT 1
+
+# REF: https://github.com/brettwooldridge/HikariCP?tab=readme-ov-file#gear-configuration-knobs-baby
+# Time in hikari is in millisecond
+spring.datasource.hikari:
+  jdbc-url: jdbc:${databaseUrl}
+  driver-class-name: org.postgresql.Driver
+  username: ${BATCH_DATABASE_USERNAME:postgres}
+  password: ${BATCH_DATABASE_PASSWORD:postgres}
+  pool-name: SpringBootHikariCP
+  maximum-pool-size: 20
+  minimum-idle: 5
+  idle-timeout: 600000 # 10min
+  max-lifetime: 2700000 # 45min
+  initialization-fail-timeout: 0
+
+#spring.flyway:
+#  enabled: true
+#  group: true
+#  locations: classpath:/db/migration
+#  out-of-order: true
+#  validate-on-migrate: false
+#  baseline-on-migrate: true
+#  baseline-version: 1
+
+spring.rabbitmq:
+  host: ${RABBIT_HOST:localhost}
+  port: ${RABBIT_PORT:5672}
+  username: ${RABBIT_USER:rabbitmq}
+  password: ${RABBIT_PASSWORD:rabbitmq}
+
+
+spring.quartz:
+  job-store-type: jdbc
+  jdbc:
+    initialize-schema: embedded
+  properties:
+    org:
+      quartz:
+        scheduler:
+          instanceId: AUTO
+        jobStore:
+          driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+          useProperties: false
+          misfireThreshold: 60000
+          tablePrefix: QRTZ_
+          isClustered: true
+          clusterCheckinInterval: 10000
+        threadPool:
+          class: org.quartz.simpl.SimpleThreadPool
+          threadCount: 10
+          threadPriority: 5
+          threadsInheritContextClassLoaderOfInitializingThread: true
+
+# if you want to enable time limiter for circuit breaker you need to set it based on:
+# - if you config retry, the time limiter should equal to total time of total retry time of request
+# - if retry not config, it should equal to max-time of process of request time
+# - time limiter use for limit the whole process in circuit breaker.
+# e.g: if you request to service A take time more than time limiter, it will terminate request and throw TimeOutException
+#spring.cloud.circuitbreaker.resilience4j:
+#  disableTimeLimiter: true
+spring.data.redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  timeout: 1000ms
+  lettuce:
+    pool:
+      enabled: true
+      max-active: 20
+      max-idle: 20
+      min-idle: 5
+
+logging:
+  level:
+    org.jooq.Constants: OFF
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p ${PID:- } --- [%applicationName] [%15.15t] %-40.40logger{39} : [traceId=%X{traceId}] - %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+
+spring.elasticsearch:
+  uris: ${ELASTIC_SEARCH_URI:http://localhost:9200}
+  username: ${ELASTIC_SEARCH_USERNAME:elastic}
+  password: ${ELASTIC_SEARCH_PASSWORD:elastic}
+
+bulk:
+  payment:
+    exchange:
+      name: bulk-payment-exchange
+    queue:
+      name: bulk-payment-queue
+    routing:
+      key: bulk.payment.process
