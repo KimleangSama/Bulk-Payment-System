@@ -13,9 +13,9 @@ public class BulkPaymentUploadJobExecutionListener implements JobExecutionListen
     public void beforeJob(final JobExecution jobExecution) {
         final var jobParams = jobExecution.getJobParameters();
         final var filePath = jobParams.getString(UPLOAD_FILE);
-        final var batchUploadId = jobParams.getLong("UPLOAD_BATCH_ID");
+        final var bulkPaymentInfoId = jobParams.getLong(UPLOADED_BULK_PAYMENT_ID);
         final var jobId = jobExecution.getJobId();
-        log.info("JobId {} is starting for processing batchUploadId {} of with uploadFile {}",
-                jobId, batchUploadId, filePath);
+        log.info("JobId {} is starting for processing bulkPaymentInfoId {} of with uploadFile {}",
+                jobId, bulkPaymentInfoId, filePath);
     }
 }

@@ -23,7 +23,7 @@ public class ExcelBulkPaymentUploadMapper implements RowMapper<BulkPaymentDataIt
                     .stream()
                     .collect(Collectors.toMap(
                             // We already validate header of file, and it is better convert it to lower case for
-                            // consistent without worry about Amount or amount or AMount
+                            // consistent without worry about Amount, amount or AMount
                             km -> km.strip().toLowerCase(),
                             kv -> kv
                     ));

@@ -4,6 +4,7 @@ import com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
@@ -30,6 +31,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 public class BulkPaymentUploadConfig {
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
+    @Value("${bulk.payment.chunk.size:25}")
+    private int chunkSize;
 
     @Bean
     @StepScope
@@ -74,7 +77,7 @@ public class BulkPaymentUploadConfig {
                                     final BulkPaymentUploadProcessor bulkPaymentUploadProcessor,
                                     final BulkPaymentUploadWriter bulkPaymentUploadWriter) {
         return new StepBuilder("importExcelToDbStep", jobRepository)
-                .<BulkPaymentDataItem, Map<String, Object>>chunk(10, platformTransactionManager)
+                .<BulkPaymentDataItem, Map<String, Object>>chunk(chunkSize, platformTransactionManager)
                 .reader(excelBatchUploadReader)
                 .processor(bulkPaymentUploadProcessor)
                 .writer(bulkPaymentUploadWriter)
@@ -86,7 +89,7 @@ public class BulkPaymentUploadConfig {
                                   final BulkPaymentUploadProcessor bulkPaymentUploadProcessor,
                                   final BulkPaymentUploadWriter bulkPaymentUploadWriter) {
         return new StepBuilder("importCsvToDbStep", jobRepository)
-                .<BulkPaymentDataItem, Map<String, Object>>chunk(10, platformTransactionManager)
+                .<BulkPaymentDataItem, Map<String, Object>>chunk(chunkSize, platformTransactionManager)
                 .reader(csvBatchUploadReader)
                 .processor(bulkPaymentUploadProcessor)
                 .writer(bulkPaymentUploadWriter)
@@ -105,7 +108,7 @@ public class BulkPaymentUploadConfig {
     public Flow uploadExcelFlow(final Step importExcelToDbStep) {
         return new FlowBuilder<SimpleFlow>("uploadExcelFlow")
                 .start(importExcelToDbStep)
-                .on("COMPLETED")
+                .on(BatchStatus.COMPLETED.name())
                 .end()
                 .build();
     }
@@ -114,7 +117,7 @@ public class BulkPaymentUploadConfig {
     public Flow uploadCsvFlow(final Step importCsvToDbStep) {
         return new FlowBuilder<SimpleFlow>("uploadCsvFlow")
                 .start(importCsvToDbStep)
-                .on("COMPLETED")
+                .on(BatchStatus.COMPLETED.name())
                 .end()
                 .build();
     }
@@ -133,12 +136,12 @@ public class BulkPaymentUploadConfig {
 
                 // If the decider returns a specific value, execute the Excel import step
                 .from(bulkPaymentUploadJobDecider)
-                .on("START_UPLOAD_EXCEL_STEP")
+                .on(BulkPaymentConstant.START_UPLOAD_EXCEL_STEP)
                 .to(uploadExcelFlow)
 
                 // If the decider returns a different value, execute the CSV import step
                 .from(bulkPaymentUploadJobDecider)
-                .on("START_UPLOAD_CSV_STEP")
+                .on(BulkPaymentConstant.START_UPLOAD_CSV_STEP)
                 .to(uploadCsvFlow)
 
                 // Always cleanup resource and determine job success or failed based on previous step

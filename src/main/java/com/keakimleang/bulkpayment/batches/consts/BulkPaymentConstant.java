@@ -26,4 +26,7 @@ public class BulkPaymentConstant {
 
     public static final String BENEFICIARY_ACCOUNT = "beneficiary account";
     public static final String AMOUNT = "amount";
+
+    public static final String START_UPLOAD_EXCEL_STEP = "START_UPLOAD_EXCEL_STEP";
+    public static final String START_UPLOAD_CSV_STEP = "START_UPLOAD_CSV_STEP";
 }

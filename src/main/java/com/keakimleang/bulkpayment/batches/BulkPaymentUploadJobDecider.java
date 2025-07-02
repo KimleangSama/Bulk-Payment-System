@@ -17,10 +17,10 @@ public class BulkPaymentUploadJobDecider implements JobExecutionDecider {
         final var fileName = jobExecution.getJobParameters()
                 .getString(UPLOAD_FILE);
         if (StringWrapperUtils.endsWithIgnoreCase(fileName, ".xlsx")) {
-            return new FlowExecutionStatus("START_UPLOAD_EXCEL_STEP");
+            return new FlowExecutionStatus(START_UPLOAD_EXCEL_STEP);
         }
         if (StringWrapperUtils.endsWithIgnoreCase(fileName, ".csv")) {
-            return new FlowExecutionStatus("START_UPLOAD_CSV_STEP");
+            return new FlowExecutionStatus(START_UPLOAD_CSV_STEP);
         }
         return FlowExecutionStatus.FAILED;
     }

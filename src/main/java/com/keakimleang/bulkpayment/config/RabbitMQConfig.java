@@ -3,6 +3,7 @@ package com.keakimleang.bulkpayment.config;
 import com.keakimleang.bulkpayment.quartz.BulkPaymentDataProdMessage;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -19,8 +20,8 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableRabbit
+@RequiredArgsConstructor
 public class RabbitMQConfig {
-
     @Value("${bulk.payment.exchange.name:bulk-payment-exchange}")
     private String exchangeName;
 
@@ -68,4 +69,5 @@ public class RabbitMQConfig {
         converter.setClassMapper(classMapper);
         return converter;
     }
+
 }

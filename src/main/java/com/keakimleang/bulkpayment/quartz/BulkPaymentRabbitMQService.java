@@ -14,7 +14,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.rabbitmq.OutboundMessage;
@@ -129,7 +131,6 @@ public class BulkPaymentRabbitMQService {
     private Mono<BulkPaymentDataProdMessage> processBulkPaymentMessage(BulkPaymentDataProdMessage message) {
         return Flux.fromIterable(message.getRecords())
                 // Parallel processing with concurrency limit of 5
-//                .flatMapSequential(this::processRecord, consumerConcurrency)
                 .flatMap(this::processRecord, consumerConcurrency)
                 .collectList()
                 .flatMap(statuses -> updateBulkPaymentInfoStatus(message.getBulkPaymentInfoId(), statuses))
@@ -137,40 +138,58 @@ public class BulkPaymentRabbitMQService {
     }
 
     private Mono<String> processRecord(BulkPaymentDataProd record) {
-        return validate(record)
-                .timeout(Duration.ofSeconds(30))
+        return webClient.get()
+                .uri("/posts/{id}", record.getId())
+                .retrieve()
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(10))
                 .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
                         .maxBackoff(Duration.ofSeconds(5)))
-                .flatMap(apiResult -> {
-                    String status = mock(record);
-                    return updateBulkPaymentDataStatus(record, status).thenReturn(status);
+                .flatMap(result -> {
+                    String status = "SUCCESS";
+                    return updateBulkPaymentDataStatus(record, status, null).thenReturn(status);
                 })
                 .onErrorResume(e -> {
-                    log.error("API call failed for record {}", record.getId(), e);
-                    return updateBulkPaymentDataStatus(record, "FAIL").thenReturn("FAIL");
+                    Throwable actual = e.getCause() != null ? e.getCause() : e;
+
+                    String failureReason;
+                    String status;
+
+                    switch (actual) {
+                        case WebClientResponseException ex -> {
+                            status = "FAIL";
+                            failureReason = ex.getMessage();
+                        }
+                        case TimeoutException ignored -> {
+                            status = "FAIL";
+                            failureReason = "Request timed out";
+                        }
+                        case RejectedExecutionException ignored -> {
+                            status = "FAIL";
+                            failureReason = "Resource exhausted / thread pool rejected";
+                        }
+                        default -> {
+                            status = "FAIL";
+                            failureReason = actual.getMessage();
+                        }
+                    }
+
+                    log.error("API call failed for record {}. Status: {}, Reason: {}", record.getId(), status, failureReason, actual);
+                    return updateBulkPaymentDataStatus(record, status, failureReason)
+                            .thenReturn(status);
                 });
     }
 
-    private String mock(BulkPaymentDataProd record) {
-        // Mocking the API call for demonstration purposes
-        return Objects.equals(record.getBeneficiaryAccount(), "5") ||
-                Objects.equals(record.getBeneficiaryAccount(), "7") ||
-                Objects.equals(record.getBeneficiaryAccount(), "9") ? "FAIL" : "SUCCESS";
-    }
-
-    private Mono<String> validate(BulkPaymentDataProd record) {
-//        return webClient.get()
-//                .uri("/posts/11") // Replace with actual URI
-//                .retrieve()
-//                .bodyToMono(String.class);
-        return Mono.just("VALID");
-    }
-
-    private Mono<BulkPaymentDataProd> updateBulkPaymentDataStatus(BulkPaymentDataProd record, String status) {
+    private Mono<BulkPaymentDataProd> updateBulkPaymentDataStatus(BulkPaymentDataProd record, String status, String failureReason) {
         record.setStatus(status);
         record.setUpdatedAt(LocalDateTime.now());
-        return bulkPaymentDataProdRepository.save(record)
-                .doOnNext(saved -> log.info("Updated record {} status to {}", saved.getId(), saved.getStatus()));
+        if ("FAIL".equals(status)) {
+            record.setFailureReason(failureReason);
+        } else {
+            record.setFailureReason(null); // Clear failure reason on success
+        }
+        record.setExecutedAt(LocalDateTime.now());
+        return bulkPaymentDataProdRepository.save(record);
     }
 
     private Mono<Void> updateBulkPaymentInfoStatus(Long bulkPaymentInfoId, List<String> statuses) {

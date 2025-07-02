@@ -62,6 +62,14 @@ spring.rabbitmq:
   port: ${RABBIT_PORT:5672}
   username: ${RABBIT_USER:rabbitmq}
   password: ${RABBIT_PASSWORD:rabbitmq}
+  listener:
+    simple:
+      retry:
+        enabled: true
+        initial-interval: 3s
+        max-attempts: 1
+        max-interval: 10s
+        multiplier: 2
 
 
 spring.quartz:
@@ -117,6 +125,8 @@ spring.elasticsearch:
 
 bulk:
   payment:
+    chunk:
+      size: 1000
     exchange:
       name: bulk-payment-exchange
     queue:

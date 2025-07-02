@@ -31,10 +31,12 @@ import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 @RequiredArgsConstructor
 @Service
@@ -55,15 +57,16 @@ public class BulkPaymentService {
         return requestMono
                 .flatMap(bulkPaymentUploadValidator::validateFile)
                 .flatMap(request -> saveUploadToTempDir(request)
-                        .flatMap(temp -> Mono.zip(Mono.just(request), Mono.just(temp))))
+                        .map(temp -> Tuples.of(request, temp)))
                 .flatMap(tuple2 -> Mono.zip(Mono.just(tuple2.getT2()), saveToBulkUploadInfo(tuple2.getT1()), Mono.just(tuple2.getT1())))
                 .flatMap(tuple3 -> {
                     final var runAsync = tuple3.getT3().runJobAsync();
                     if (runAsync) {
                         // Run the job in the background and immediately return the upload ID
-                        Mono.fromRunnable(() -> processBatchUploadJob(tuple3, true).subscribe())
+                        Mono.defer(() -> processBatchUploadJob(tuple3, true))
                                 .subscribeOn(Schedulers.boundedElastic())
-                                .subscribe();
+                                .subscribe(null, e ->
+                                        log.error("Error processing batch upload job asynchronously: {}", e.getMessage(), e));
                         // Return the upload ID immediately without waiting for job completion
                         return Mono.just(tuple3.getT2().getId());
                     } else {
@@ -160,17 +163,50 @@ public class BulkPaymentService {
         return Mono.empty();
     }
 
+    private final DatabaseClient databaseClient;
+
     private Mono<Long> moveRecords(Long bulkPaymentInfoId) {
-        return bulkPaymentDataProdRepository.moveValidRecordFromStagingToProd(bulkPaymentInfoId)
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(movedCount -> {
-                    if (movedCount <= 0) {
-                        return Mono.error(new BulkPaymentServiceException(
-                                "No valid records found to move for bulk payment info ID: " + bulkPaymentInfoId));
-                    }
-                    log.info("Moved {} valid records from staging to production for bulk payment info ID: {}", movedCount, bulkPaymentInfoId);
-                    return Mono.just(movedCount);
-                });
+        String sql = """
+                    INSERT INTO bulk_payment_data_prod (
+                        bulk_payment_info_id,
+                        beneficiary_account,
+                        beneficiary_name,
+                        amount,
+                        fee,
+                        status,
+                        failure_reason,
+                        created_at,
+                        updated_at
+                    )
+                    SELECT
+                        bulk_payment_info_id,
+                        beneficiary_account,
+                        beneficiary_name,
+                        amount,
+                        fee,
+                        'CONFIRMED',
+                        failure_reason,
+                        created_at,
+                        now()
+                    FROM bulk_payment_data_staging
+                    WHERE bulk_payment_info_id = :bulkPaymentInfoId
+                      AND failure_reason IS NULL
+                """;
+
+//        return bulkPaymentDataProdRepository.moveValidRecordFromStagingToProd(bulkPaymentInfoId)
+//                .subscribeOn(Schedulers.boundedElastic())
+//                .flatMap(movedCount -> {
+//                    if (movedCount <= 0) {
+//                        return Mono.error(new BulkPaymentServiceException(
+//                                "No valid records found to move for bulk payment info ID: " + bulkPaymentInfoId));
+//                    }
+//                    log.info("Moved {} valid records from staging to production for bulk payment info ID: {}", movedCount, bulkPaymentInfoId);
+//                    return Mono.just(movedCount);
+//                });
+        return databaseClient.sql(sql)
+                .bind("bulkPaymentInfoId", bulkPaymentInfoId)
+                .fetch()
+                .rowsUpdated();
     }
 
     private Mono<BulkPaymentInfo> updateBulkPaymentInfo(BulkPaymentInfo info, Long movedCount) {
