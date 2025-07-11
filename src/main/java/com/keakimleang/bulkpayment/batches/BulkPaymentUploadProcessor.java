@@ -7,7 +7,6 @@ import com.keakimleang.bulkpayment.utils.DateUtil;
 import com.keakimleang.bulkpayment.utils.StringWrapperUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,29 +43,10 @@ public class BulkPaymentUploadProcessor implements ItemProcessor<BulkPaymentData
 
     @Override
     public Map<String, Object> process(@NonNull final BulkPaymentDataItem item) {
+        log.info("Bulk Payment upload processing item: {}", item.getBeneficiaryAccount());
         final int rowNum = totalRecords.getAndIncrement();
         String errorMsg = validator.validateItem(item);
         boolean isValid = StringWrapperUtils.isBlank(errorMsg);
-
-        if (isValid) {
-            try {
-//                webClient.get()
-//                        .uri("/posts/11")
-//                        .retrieve()
-//                        .bodyToMono(String.class)
-//                        .block();
-            } catch (Exception ex) {
-                log.error("Error while calling external API for row {}: {}", rowNum, ex.getMessage(), ex);
-            }
-        }
-
-        if (rowNum % 2 == 0) {
-            errorMsg = "Simulated invalid row";
-            isValid = true;
-        } else {
-            errorMsg = "Simulated valid row";
-            isValid = true;
-        }
 
         if (isValid) {
             validRecords++;
@@ -87,10 +67,6 @@ public class BulkPaymentUploadProcessor implements ItemProcessor<BulkPaymentData
         map.put("sequence_number", rowNum);
         map.put("created_at", now);
         return map;
-    }
-
-    private LocalDate parseDate(final String value) {
-        return CastObjectUtil.getLocalDate(value, "yyyyMMdd");
     }
 
     private BigDecimal parseAmount(final String amount) {

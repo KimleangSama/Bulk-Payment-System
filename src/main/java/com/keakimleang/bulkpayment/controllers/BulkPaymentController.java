@@ -27,7 +27,7 @@ public class BulkPaymentController {
     private final BulkPaymentService bulkPaymentService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<ResponseEntity<ApiResponse<Map<String, Long>>>> uploadAlternative(
+    public Mono<ResponseEntity<ApiResponse<Map<String, Long>>>> upload(
             @RequestPart("file") final Mono<FilePart> filePartMono,
             @RequestPart("sourceAccount") final Mono<String> sourceAccountMono,
             @RequestPart("currency") final Mono<String> currencyMono,

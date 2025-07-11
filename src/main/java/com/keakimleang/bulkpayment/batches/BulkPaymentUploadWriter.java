@@ -1,11 +1,18 @@
 package com.keakimleang.bulkpayment.batches;
 
-import java.util.*;
-import org.jooq.*;
-import org.jooq.impl.*;
-import org.springframework.batch.item.*;
-import org.springframework.lang.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
+import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.RowN;
+import org.jooq.impl.DSL;
+import org.springframework.batch.item.Chunk;
+import org.springframework.batch.item.ItemWriter;
+import org.springframework.lang.NonNull;
 
+@Slf4j
 public class BulkPaymentUploadWriter implements ItemWriter<Map<String, Object>> {
     private final DSLContext create;
     private final String tableName;
@@ -20,6 +27,8 @@ public class BulkPaymentUploadWriter implements ItemWriter<Map<String, Object>> 
 
     @Override
     public void write(@NonNull final Chunk<? extends Map<String, Object>> chunk) {
+        log.info("Bulk Payment write completed");
+
         if (Objects.isNull(fields)) {
             setFields(chunk.getItems().getFirst());
         }

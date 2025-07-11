@@ -126,7 +126,9 @@ spring.elasticsearch:
 bulk:
   payment:
     chunk:
-      size: 1000
+      size: 3
+    consumer:
+      concurrency: 3
     exchange:
       name: bulk-payment-exchange
     queue:

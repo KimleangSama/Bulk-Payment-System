@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,9 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class BulkPaymentRabbitMQService {
 
+    private static final String SUCCESS = "SUCCESS";
+    private static final String FAIL = "FAIL";
+
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private final RabbitMQProperties rabbitMQProperties;
@@ -62,6 +66,9 @@ public class BulkPaymentRabbitMQService {
 
     @PostConstruct
     public void init() {
+        if (rabbitMQProperties == null) {
+            throw new IllegalStateException("RabbitMQProperties must be configured");
+        }
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.setHost(rabbitMQProperties.getHost());
         connectionFactory.setPort(rabbitMQProperties.getPort());
@@ -73,8 +80,8 @@ public class BulkPaymentRabbitMQService {
 
     @PreDestroy
     public void cleanup() {
-        sender.close();
-        receiver.close();
+        if (sender != null) sender.close();
+        if (receiver != null) receiver.close();
     }
 
     /**
@@ -143,72 +150,58 @@ public class BulkPaymentRabbitMQService {
                 .retrieve()
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(10))
-                .retryWhen(Retry.backoff(3, Duration.ofMillis(500))
-                        .maxBackoff(Duration.ofSeconds(5)))
-                .flatMap(result -> {
-                    String status = "SUCCESS";
-                    return updateBulkPaymentDataStatus(record, status, null).thenReturn(status);
-                })
-                .onErrorResume(e -> {
-                    Throwable actual = e.getCause() != null ? e.getCause() : e;
+                .retryWhen(Retry.backoff(3, Duration.ofMillis(500)).maxBackoff(Duration.ofSeconds(5)))
+                .flatMap(result -> updateBulkPaymentDataStatus(record, SUCCESS, null).thenReturn(SUCCESS))
+                .onErrorResume(e -> handleError(record, e));
+    }
 
-                    String failureReason;
-                    String status;
-
-                    switch (actual) {
-                        case WebClientResponseException ex -> {
-                            status = "FAIL";
-                            failureReason = ex.getMessage();
-                        }
-                        case TimeoutException ignored -> {
-                            status = "FAIL";
-                            failureReason = "Request timed out";
-                        }
-                        case RejectedExecutionException ignored -> {
-                            status = "FAIL";
-                            failureReason = "Resource exhausted / thread pool rejected";
-                        }
-                        default -> {
-                            status = "FAIL";
-                            failureReason = actual.getMessage();
-                        }
-                    }
-
-                    log.error("API call failed for record {}. Status: {}, Reason: {}", record.getId(), status, failureReason, actual);
-                    return updateBulkPaymentDataStatus(record, status, failureReason)
-                            .thenReturn(status);
-                });
+    private Mono<String> handleError(BulkPaymentDataProd record, Throwable e) {
+        Throwable cause = Optional.ofNullable(e.getCause()).orElse(e);
+        String failureReason;
+        String status;
+        switch (cause) {
+            case WebClientResponseException ex -> {
+                status = FAIL;
+                failureReason = ex.getMessage();
+            }
+            case TimeoutException ignored -> {
+                status = FAIL;
+                failureReason = "Request timed out";
+            }
+            case RejectedExecutionException ignored -> {
+                status = FAIL;
+                failureReason = "Execution rejected (thread pool)";
+            }
+            default -> {
+                status = FAIL;
+                failureReason = cause.getMessage();
+            }
+        }
+        log.error("Process failed | recordId={} | status={} | reason={}", record.getId(), status, failureReason, cause);
+        return updateBulkPaymentDataStatus(record, status, failureReason).thenReturn(status);
     }
 
     private Mono<BulkPaymentDataProd> updateBulkPaymentDataStatus(BulkPaymentDataProd record, String status, String failureReason) {
         record.setStatus(status);
         record.setUpdatedAt(LocalDateTime.now());
-        if ("FAIL".equals(status)) {
-            record.setFailureReason(failureReason);
-        } else {
-            record.setFailureReason(null); // Clear failure reason on success
-        }
         record.setExecutedAt(LocalDateTime.now());
+        record.setFailureReason(SUCCESS.equals(status) ? null : failureReason);
         return bulkPaymentDataProdRepository.save(record);
     }
 
     private Mono<Void> updateBulkPaymentInfoStatus(Long bulkPaymentInfoId, List<String> statuses) {
-        long failedCount = statuses.stream().filter(s -> !"SUCCESS".equals(s)).count();
-        String parentStatus = failedCount == 0 ? "COMPLETED" : "PARTIAL_FAIL";
+        long failed = statuses.stream().filter(s -> !SUCCESS.equals(s)).count();
+        String status = failed == 0 ? "COMPLETED" : "FAILED";
 
         return bulkPaymentInfoRepository.findById(bulkPaymentInfoId)
-                .flatMap(bulkPaymentInfo -> {
-                    bulkPaymentInfo.setStatus(ProcessingStatus.valueOf(parentStatus));
-                    bulkPaymentInfo.setUpdatedAt(LocalDateTime.now());
-                    bulkPaymentInfo.setRemark(
-                            failedCount > 0 ?
-                                    String.format("%d record(s) failed.", failedCount) :
-                                    "All records processed successfully."
-                    );
-                    return bulkPaymentInfoRepository.save(bulkPaymentInfo);
+                .flatMap(info -> {
+                    info.setStatus(ProcessingStatus.valueOf(status));
+                    info.setUpdatedAt(LocalDateTime.now());
+                    info.setRemark(failed > 0 ? failed + " record(s) failed." : "All records processed successfully.");
+                    return bulkPaymentInfoRepository.save(info);
                 })
-                .doOnSuccess(v -> log.info("Updated parent bulkPaymentInfo {} status to {}", bulkPaymentInfoId, parentStatus))
-                .doOnError(e -> log.error("Failed updating bulkPaymentInfo status for {}", bulkPaymentInfoId, e))
+                .doOnSuccess(v -> log.info("Updated bulkPaymentInfo | id={} | status={}", bulkPaymentInfoId, status))
+                .doOnError(e -> log.error("Failed to update bulkPaymentInfo | id={}", bulkPaymentInfoId, e))
                 .then();
     }
 }

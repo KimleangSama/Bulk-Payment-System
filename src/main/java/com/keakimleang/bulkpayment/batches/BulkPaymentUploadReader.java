@@ -28,7 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @RequiredArgsConstructor
-public class BulkPaymentUploadConfig {
+public class BulkPaymentUploadReader {
     private final JobRepository jobRepository;
     private final PlatformTransactionManager platformTransactionManager;
     @Value("${bulk.payment.chunk.size:25}")
