@@ -2,6 +2,7 @@ package com.keakimleang.bulkpayment.batches;
 
 import com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant;
 import com.keakimleang.bulkpayment.payloads.ProcessingStatus;
+import com.keakimleang.bulkpayment.services.AuthServiceClient;
 import com.keakimleang.bulkpayment.utils.CastObjectUtil;
 import com.keakimleang.bulkpayment.utils.DateUtil;
 import com.keakimleang.bulkpayment.utils.StringWrapperUtils;
@@ -21,7 +22,6 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 
 @Slf4j
 @Component
@@ -31,7 +31,8 @@ public class BulkPaymentUploadProcessor implements ItemProcessor<BulkPaymentData
 
     private final BulkPaymentUploadValidator validator;
     private final DSLContext create;
-    private final WebClient webClient;
+    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
+    private final AuthServiceClient client;
 
     private Long uploadedBulkPaymentId;
     private String uploadedBulkPaymentCurrency;
@@ -40,13 +41,17 @@ public class BulkPaymentUploadProcessor implements ItemProcessor<BulkPaymentData
     private int validRecords;
     private int invalidRecords;
 
-
     @Override
     public Map<String, Object> process(@NonNull final BulkPaymentDataItem item) {
         log.info("Bulk Payment upload processing item: {}", item.getBeneficiaryAccount());
         final int rowNum = totalRecords.getAndIncrement();
         String errorMsg = validator.validateItem(item);
         boolean isValid = StringWrapperUtils.isBlank(errorMsg);
+
+        client.getUserById(1L)
+                .doOnNext(user -> log.info("User details: {}", user))
+                .doOnError(error -> log.error("Error fetching user details", error))
+                .subscribe();
 
         if (isValid) {
             validRecords++;

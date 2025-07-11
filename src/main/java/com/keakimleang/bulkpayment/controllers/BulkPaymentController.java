@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ import reactor.core.scheduler.Schedulers;
 public class BulkPaymentController {
     private final BulkPaymentService bulkPaymentService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<ApiResponse<Map<String, Long>>>> upload(
             @RequestPart("file") final Mono<FilePart> filePartMono,

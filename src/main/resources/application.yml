@@ -112,16 +112,15 @@ spring.data.redis:
       max-idle: 20
       min-idle: 5
 
-logging:
-  level:
-    org.jooq.Constants: OFF
-  pattern:
-    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p ${PID:- } --- [%applicationName] [%15.15t] %-40.40logger{39} : [traceId=%X{traceId}] - %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
-
 spring.elasticsearch:
   uris: ${ELASTIC_SEARCH_URI:http://localhost:9200}
   username: ${ELASTIC_SEARCH_USERNAME:elastic}
   password: ${ELASTIC_SEARCH_PASSWORD:elastic}
+
+feign-client:
+  auth:
+    url: ${AUTH_SERVICE_URL:http://localhost:10001}
+    service-name: ${AUTH_SERVICE_NAME:auth-service}
 
 bulk:
   payment:
@@ -135,3 +134,35 @@ bulk:
       name: bulk-payment-queue
     routing:
       key: bulk.payment.process
+
+token:
+  domain: ${TOKEN_DOMAIN:BulkPaymentAPI}
+  accessTokenExpiresHours: 336
+  refreshTokenExpiresHours: 720
+  issuer: jwt_issuer
+  secret: ${TOKEN_SECRET:WjJWdVpYSmhkR1ZmYkc5dVoxOXpaV055WlhSZmEyVjU=}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  info:
+    git:
+      mode: full
+  metrics:
+    tags:
+      application: ${spring.application.name}
+logging:
+  level:
+    org.jooq.Constants: OFF
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p ${PID:- } --- [%applicationName] [%15.15t] %-40.40logger{39} : [traceId=%X{traceId}] - %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+log:
+  loki:
+    url: ${LOKI_URL:http://localhost:3100/loki/api/v1/push}
+  logstash:
+    url: ${LOGSTASH_URL:localhost:5044}
