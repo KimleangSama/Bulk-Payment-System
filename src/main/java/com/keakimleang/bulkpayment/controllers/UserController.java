@@ -1,10 +1,10 @@
 package com.keakimleang.bulkpayment.controllers;
 
-import com.keakimleang.bulkpayment.securities.User;
 import com.keakimleang.bulkpayment.payloads.requests.AuthRequest;
 import com.keakimleang.bulkpayment.repos.UserRepository;
 import com.keakimleang.bulkpayment.securities.CustomReactiveUserDetailsService;
 import com.keakimleang.bulkpayment.securities.CustomUserDetails;
+import com.keakimleang.bulkpayment.securities.User;
 import com.keakimleang.bulkpayment.utils.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,19 +41,17 @@ public class UserController {
     @PostMapping("/login")
     public Mono<String> login(@RequestBody AuthRequest request) {
         return userDetailsService.findByUsername(request.getUsername())
-                .flatMap(user -> {
-                    return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()))
-                            .flatMap(authentication -> {
-                                if (authentication.isAuthenticated()) {
-                                    CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-                                    String token = tokenUtil.generateAccessToken(userDetails);
-                                    log.info("User logged in successfully: {}", userDetails.getUsername());
-                                    return Mono.just(token);
-                                } else {
-                                    return Mono.error(new RuntimeException("Authentication failed"));
-                                }
-                            });
-                })
+                .flatMap(user -> authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()))
+                        .flatMap(authentication -> {
+                            if (authentication.isAuthenticated()) {
+                                CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+                                String token = tokenUtil.generateAccessToken(userDetails);
+                                log.info("User logged in successfully: {}", userDetails.getUsername());
+                                return Mono.just(token);
+                            } else {
+                                return Mono.error(new RuntimeException("Authentication failed"));
+                            }
+                        }))
                 .switchIfEmpty(Mono.error(new RuntimeException("User not found")));
     }
 }

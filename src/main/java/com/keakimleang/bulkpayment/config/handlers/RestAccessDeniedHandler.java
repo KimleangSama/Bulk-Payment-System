@@ -18,7 +18,7 @@ public class RestAccessDeniedHandler implements ServerAccessDeniedHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, AccessDeniedException denied) {
-        logger.error("Responding with access denied error. Message - {}", denied.getMessage());
+        logger.error("Error Message - {}", denied.getMessage());
         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap("{\"statusCode\": 403, \"success\": false,  \"status\": \"UNAUTHORIZED\", \"error\": \"User is access denied or forbidden to access.\"}".getBytes(StandardCharsets.UTF_8));
