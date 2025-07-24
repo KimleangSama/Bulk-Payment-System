@@ -1,4 +1,4 @@
-package com.keakimleang.bulkpayment.config;
+package com.keakimleang.bulkpayment.config.handlers;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

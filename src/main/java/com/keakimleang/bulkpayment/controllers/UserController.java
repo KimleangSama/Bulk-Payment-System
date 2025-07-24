@@ -1,6 +1,6 @@
 package com.keakimleang.bulkpayment.controllers;
 
-import com.keakimleang.bulkpayment.config.ReactiveWebSocketHandler;
+import com.keakimleang.bulkpayment.config.handlers.ReactiveWebSocketHandler;
 import com.keakimleang.bulkpayment.payloads.requests.AuthRequest;
 import com.keakimleang.bulkpayment.repos.UserRepository;
 import com.keakimleang.bulkpayment.securities.CustomReactiveUserDetailsService;
