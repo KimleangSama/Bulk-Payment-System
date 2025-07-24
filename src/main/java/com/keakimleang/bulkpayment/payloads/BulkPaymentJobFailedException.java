@@ -1,6 +1,6 @@
 package com.keakimleang.bulkpayment.payloads;
 
-import lombok.*;
+import lombok.Getter;
 
 @Getter
 public class BulkPaymentJobFailedException extends BulkPaymentServiceException {

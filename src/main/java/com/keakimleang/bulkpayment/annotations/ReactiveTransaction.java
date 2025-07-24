@@ -1,8 +1,13 @@
 package com.keakimleang.bulkpayment.annotations;
 
-import java.lang.annotation.*;
-import org.springframework.core.annotation.*;
-import org.springframework.transaction.annotation.*;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.core.annotation.AliasFor;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Transactional(transactionManager = "r2dbcTransactionManager")
 @Target(ElementType.METHOD)

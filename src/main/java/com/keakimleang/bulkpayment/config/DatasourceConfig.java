@@ -1,13 +1,14 @@
 package com.keakimleang.bulkpayment.config;
 
-import com.zaxxer.hikari.*;
-import io.r2dbc.spi.*;
-import javax.sql.*;
-import org.springframework.boot.context.properties.*;
-import org.springframework.context.annotation.*;
-import org.springframework.jdbc.datasource.*;
-import org.springframework.r2dbc.connection.*;
-import org.springframework.transaction.*;
+import com.zaxxer.hikari.HikariDataSource;
+import io.r2dbc.spi.ConnectionFactory;
+import javax.sql.DataSource;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.r2dbc.connection.R2dbcTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration(proxyBeanMethods = false)
 public class DatasourceConfig {

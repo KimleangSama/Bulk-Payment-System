@@ -14,7 +14,7 @@ public class RestAuthenticationEntryPoint implements ServerAuthenticationEntryPo
 
     @Override
     public Mono<Void> commence(ServerWebExchange exchange, AuthenticationException ex) {
-        logger.error("Responding with unauthorized error. Message - {}", ex.getMessage());
+        logger.error("Error Message - {}", ex.getMessage());
         exchange.getResponse().setStatusCode(org.springframework.http.HttpStatus.FORBIDDEN);
         exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
         return exchange.getResponse().writeWith(Mono.just(exchange.getResponse()

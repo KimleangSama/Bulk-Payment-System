@@ -1,9 +1,11 @@
 package com.keakimleang.bulkpayment.batches;
 
-import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.*;
-import lombok.extern.slf4j.*;
-import org.springframework.batch.core.*;
-import org.springframework.stereotype.*;
+import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOADED_BULK_PAYMENT_ID;
+import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOAD_FILE;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobExecutionListener;
+import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j

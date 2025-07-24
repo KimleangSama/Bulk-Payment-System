@@ -1,6 +1,6 @@
 package com.keakimleang.bulkpayment.payloads;
 
-import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiError(String errorCode, String message, String field) {

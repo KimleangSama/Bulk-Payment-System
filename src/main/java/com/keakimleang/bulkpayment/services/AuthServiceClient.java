@@ -1,7 +1,6 @@
 package com.keakimleang.bulkpayment.services;
 
 import java.util.Map;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import reactivefeign.spring.config.ReactiveFeignClient;

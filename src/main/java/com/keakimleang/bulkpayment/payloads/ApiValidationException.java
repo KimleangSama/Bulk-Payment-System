@@ -1,7 +1,8 @@
 package com.keakimleang.bulkpayment.payloads;
 
-import java.util.*;
-import lombok.*;
+import java.util.Collections;
+import java.util.List;
+import lombok.Getter;
 
 @Getter
 public class ApiValidationException extends BulkPaymentServiceException {

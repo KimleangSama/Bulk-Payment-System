@@ -1,16 +1,17 @@
 package com.keakimleang.bulkpayment.config.props;
 
-import java.util.*;
-import lombok.*;
-import org.springframework.boot.context.properties.*;
+import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "security.cors")
+@ConfigurationProperties(prefix = "cors")
 @Getter
 @Setter
 public class CORSProperties {
-    private List<String> allowedOrigins = List.of("*");
-    private List<String> allowedHeaders = List.of("*");
-    private List<String> allowedMethods = List.of("*");
+    private List<String> allowedOrigins;
+    private List<String> allowedHeaders;
+    private List<String> allowedMethods;
     private Boolean allowedCredentials = false;
     private Boolean allowPrivateNetwork;
     private Long maxAge;

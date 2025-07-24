@@ -1,12 +1,13 @@
 package com.keakimleang.bulkpayment.config;
 
 
-import com.keakimleang.bulkpayment.config.props.*;
-import java.util.*;
-import lombok.*;
-import org.springframework.context.annotation.*;
-import org.springframework.web.cors.*;
-import org.springframework.web.cors.reactive.*;
+import com.keakimleang.bulkpayment.config.props.CORSProperties;
+import java.util.Objects;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 @Configuration(proxyBeanMethods = false)

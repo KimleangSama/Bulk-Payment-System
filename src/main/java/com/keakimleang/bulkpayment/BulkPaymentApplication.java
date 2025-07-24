@@ -1,9 +1,9 @@
 package com.keakimleang.bulkpayment;
 
-import org.springframework.boot.*;
-import org.springframework.boot.autoconfigure.*;
-import org.springframework.boot.context.properties.*;
-import org.springframework.data.r2dbc.repository.config.*;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 import reactivefeign.spring.config.EnableReactiveFeignClients;
 
 @EnableReactiveFeignClients

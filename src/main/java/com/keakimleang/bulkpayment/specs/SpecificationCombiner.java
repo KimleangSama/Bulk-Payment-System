@@ -1,7 +1,8 @@
 package com.keakimleang.bulkpayment.specs;
 
-import java.util.*;
-import org.springframework.data.relational.core.query.*;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.data.relational.core.query.Criteria;
 
 public final class SpecificationCombiner {
 

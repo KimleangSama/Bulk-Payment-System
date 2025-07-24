@@ -37,6 +37,7 @@ public class AuthFilter implements WebFilter {
                 .flatMap(auth -> chain.filter(exchange)
                         .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth))
                 )
+                .switchIfEmpty(chain.filter(exchange)) // It is unavoidable to have no authentication, so we continue the chain.
                 .onErrorResume(e -> {
                     log.error("Authentication error", e);
                     return chain.filter(exchange);
