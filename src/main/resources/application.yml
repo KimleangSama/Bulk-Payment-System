@@ -1,4 +1,4 @@
-databaseUrl: ${BATCH_DATASOURCE_URL:postgresql://localhost:5432/demo}
+databaseUrl: ${BATCH_DATASOURCE_URL:postgresql://localhost:6432/demo}
 
 server:
   port: ${SERVER_PORT:10000}
