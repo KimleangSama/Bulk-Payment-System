@@ -23,7 +23,7 @@ jobs:
           cache: maven
       
       - name: Pull Docker Images
-        run: docker-compose -f docker-compose.yml pull
+        run: docker compose -f docker-compose.yml pull
         
       - name: Run Docker-Compose
         uses: hoverkraft-tech/compose-action@v2.3.0
