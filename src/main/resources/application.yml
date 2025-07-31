@@ -170,3 +170,13 @@ log:
     url: ${LOKI_URL:http://localhost:3100/loki/api/v1/push}
   logstash:
     url: ${LOGSTASH_URL:localhost:5044}
+elastic:
+  apm:
+    enabled: true
+    server-url: http://localhost:8200
+    service-name: elastic-apm-spring-boot-integration
+    secret-token: xxVpmQB2HMzCL9PgBHVrnxjNXXw5J7bd79DFm6sjBJR5HPXDhcF8MSb3vv4bpg44
+    environment: dev
+    application-packages: com.keakimleang.bulkpayment
+    log-level: ERROR
+    universal-profiling-integration-enabled: true

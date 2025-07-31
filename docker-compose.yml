@@ -6,12 +6,12 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: demo
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-demo}
       TZ: Asia/Phnom_Penh
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -d demo -U postgres" ]
+      test: [ "CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-demo} -U ${POSTGRES_USER:-postgres}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,8 +25,8 @@ services:
     ports:
       - "6432:6432"
     environment:
-      DB_USER: "postgres"
-      DB_PASSWORD: "postgres"
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     depends_on:
       - postgres
     volumes:
@@ -76,8 +76,8 @@ services:
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:9200', '-u', 'elastic:elastic' ]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
   logstash:
     image: elastic/logstash:9.0.3
     container_name: logstash
@@ -107,8 +107,8 @@ services:
     healthcheck:
       test: [ 'CMD', 'curl', '-f', 'http://localhost:5601' ]
       interval: 10s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
     depends_on:
       - elasticsearch
     restart: unless-stopped

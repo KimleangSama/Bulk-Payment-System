@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/base.xml"/>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
     <springProperty scope="context" name="appName" source="spring.application.name"/>
     <springProperty scope="context" name="lokiUrl" source="log.loki.url"/>
     <springProperty scope="context" name="logstashUrl" source="log.logstash.url"/>
@@ -14,20 +16,31 @@
     </appender>
 
     <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <labels>
+            agent=loki4j
+            app=${appName}
+            host=${HOSTNAME}
+        </labels>
+        <structuredMetadata>
+            level=%level
+            thread=%thread
+            logger=%logger
+        </structuredMetadata>
+        <message>
+            <pattern>{"level":"%level", "class":"%logger{36}", "thread":"%thread", "message": "%message",
+                "requestId": "%X{X-Request-ID}"}
+            </pattern>
+        </message>
         <http>
             <url>${lokiUrl}</url>
+            <sender class="com.github.loki4j.logback.ApacheHttpSender"/>
+            <requestTimeoutMs>10000</requestTimeoutMs>
         </http>
-        <format>
-            <label>
-                <pattern>application=${appName},host=${HOSTNAME},level=%level</pattern>
-            </label>
-            <message>
-                <pattern>{"level":"%level", "class":"%logger{36}", "thread":"%thread", "message": "%message",
-                    "requestId": "%X{X-Request-ID}"}
-                </pattern>
-            </message>
-            <sortByTime>true</sortByTime>
-        </format>
+        <batch>
+            <maxItems>100</maxItems>
+            <timeoutMs>10000</timeoutMs>
+        </batch>
+        <verbose>true</verbose>
     </appender>
 
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">

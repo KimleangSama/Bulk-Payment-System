@@ -15,7 +15,7 @@ public class ReactiveWebSocketHandler implements WebSocketHandler {
     @NonNull
     @Override
     public Mono<Void> handle(WebSocketSession session) {
-        String query = session.getHandshakeInfo().getUri().getQuery(); // "user_session=4"
+        String query = session.getHandshakeInfo().getUri().getQuery();
         String sessionId;
 
         if (query != null && query.startsWith("user_session=")) {
@@ -40,16 +40,12 @@ public class ReactiveWebSocketHandler implements WebSocketHandler {
                 });
     }
 
-    // Utility to send message to a session
-    public static void sendLogoutMessage(String message, String sessionId) {
-        WebSocketSession session = sessions.get(sessionId);
+    // Utility to send logoutMessage to a session
+    public static void sendLogoutMessage(String logoutMessage, String oldSessionId) {
+        WebSocketSession session = sessions.get(oldSessionId);
         if (session != null && session.isOpen()) {
-            session.send(Mono.just(session.textMessage(message))).subscribe();
+            session.send(Mono.just(session.textMessage(logoutMessage))).subscribe();
         }
     }
 
-    // Optional: Find session by custom userId if you map it
-    public static Map<String, WebSocketSession> getAllSessions() {
-        return sessions;
-    }
 }

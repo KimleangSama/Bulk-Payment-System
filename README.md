@@ -9,6 +9,11 @@ The system exposes a REST API that allows users to upload a CSV file containing 
 payments. Confirmed payments are persisted in the database, and a scheduled job periodically processes these payments in
 batches. After processing, the system updates the status and related information for each payment record.
 
+How to show passwords in PostgreSQL:
+```sql
+SELECT usename, passwd FROM pg_shadow WHERE passwd IS NOT NULL;
+```
+
 ### Technologies Used
 
 - **SB Webflux**: For building reactive web applications.

@@ -1,6 +1,7 @@
 package com.keakimleang.bulkpayment.controllers;
 
 import com.keakimleang.bulkpayment.config.handlers.ReactiveWebSocketHandler;
+import com.keakimleang.bulkpayment.payloads.UserSingleSession;
 import com.keakimleang.bulkpayment.payloads.requests.AuthRequest;
 import com.keakimleang.bulkpayment.repos.UserRepository;
 import com.keakimleang.bulkpayment.securities.CustomReactiveUserDetailsService;
@@ -56,8 +57,11 @@ public class UserController {
                             if (authentication.isAuthenticated()) {
                                 CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
                                 String token = tokenUtil.generateAccessToken(userDetails);
-                                log.info("User logged in successfully: {}", userDetails.getUsername());
-                                handleNewLogin(message, user.getUsername(), token);
+                                UserSingleSession session = new UserSingleSession();
+                                session.setMessage(message);
+                                session.setUsername(user.getUsername());
+                                session.setNewSessionId(token);
+                                handleNewLogin(session);
                                 return Mono.just(token);
                             } else {
                                 return Mono.error(new RuntimeException("Authentication failed"));
@@ -67,20 +71,20 @@ public class UserController {
     }
 
     // WebSocket to remove old session
-    public void handleNewLogin(String message, String username, String newSessionId) {
-        String key = "USER_SESSION:" + username;
+    public void handleNewLogin(UserSingleSession session) {
+        String key = "USER_SESSION:" + session.getUsername();
         String oldSessionId = redisTemplate.opsForValue().get(key);
 
         log.info("Old session id: {}", oldSessionId);
-        log.info("New session id: {}", newSessionId);
+        log.info("New session id: {}", session.getNewSessionId());
 
-        if (oldSessionId != null && !oldSessionId.equalsIgnoreCase(newSessionId)) {
+        if (oldSessionId != null && !oldSessionId.equalsIgnoreCase(session.getNewSessionId())) {
             // Notify old session via WebSocket
             log.info("Kicking out old session: {}", oldSessionId);
-            ReactiveWebSocketHandler.sendLogoutMessage(message, oldSessionId);
+            ReactiveWebSocketHandler.sendLogoutMessage(session.getMessage(), oldSessionId);
         }
 
         // Save new session
-        redisTemplate.opsForValue().set(key, newSessionId, Duration.ofMinutes(60));
+        redisTemplate.opsForValue().set(key, session.getNewSessionId(), Duration.ofMinutes(60));
     }
 }

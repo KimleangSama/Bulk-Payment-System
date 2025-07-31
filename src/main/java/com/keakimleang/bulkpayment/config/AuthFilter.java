@@ -23,24 +23,27 @@ public class AuthFilter implements WebFilter {
     @NonNull
     @Override
     public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
-        return Mono.justOrEmpty(exchange.getRequest().getHeaders().getFirst("Authorization"))
-                .filter(auth -> auth.startsWith("Bearer "))
-                .map(auth -> auth.substring(7))
-                .filter(tokenUtil::validateToken)
-                .flatMap(token -> {
-                    String username = tokenUtil.getUsernameFromToken(token);
-                    return service.findByUsername(username)
-                            .map(userDetails -> new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities()
-                            ));
-                })
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return chain.filter(exchange);
+        }
+
+        String token = authHeader.substring(7);
+        if (!tokenUtil.validateToken(token)) {
+            return chain.filter(exchange);
+        }
+
+        String username = tokenUtil.getUsernameFromToken(token);
+
+        return service.findByUsername(username)
+                .map(userDetails -> new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities()))
                 .flatMap(auth -> chain.filter(exchange)
-                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth))
-                )
-                .switchIfEmpty(chain.filter(exchange)) // It is unavoidable to have no authentication, so we continue the chain.
+                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(auth)))
                 .onErrorResume(e -> {
-                    log.error("Authentication error", e);
-                    return chain.filter(exchange);
+                    log.error("Authentication error for token [{}]: {}", token, e.getMessage(), e);
+                    return Mono.error(e);
                 });
     }
 }
