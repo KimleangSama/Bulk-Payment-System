@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.keakimleang</groupId>
-    <artifactId>spring-batch-webflux</artifactId>
+    <artifactId>bulk-payment</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Bulk-Payment</name>
     <description>Bulk-Payment</description>
@@ -77,6 +77,7 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.19.1</version>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

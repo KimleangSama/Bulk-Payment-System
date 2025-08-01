@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,6 +68,15 @@ public class UserController {
                                 return Mono.error(new RuntimeException("Authentication failed"));
                             }
                         }))
+                .onErrorResume(throwable -> {
+                    if (throwable instanceof BadCredentialsException) {
+                        log.error("Login failed for user {}: {}", request.getUsername(), throwable.getMessage());
+                        return Mono.error(new BadCredentialsException("Invalid username or password"));
+                    } else {
+                        log.error("Error during login for user {}: {}", request.getUsername(), throwable.getMessage());
+                        return Mono.error(throwable);
+                    }
+                })
                 .switchIfEmpty(Mono.error(new RuntimeException("User not found")));
     }
 

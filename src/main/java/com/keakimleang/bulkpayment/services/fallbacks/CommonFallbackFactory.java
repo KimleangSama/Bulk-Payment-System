@@ -26,7 +26,7 @@ public abstract class CommonFallbackFactory<T> implements FallbackFactory<T> {
     public <R> Mono<R> handleException(final Throwable error) {
         if (error instanceof CallNotPermittedException cne) {
             log.warn("Skip request of {} during CircuitBreaker in OPEN state", cne.getCausingCircuitBreakerName());
-            return Mono.error(new FeignServiceException(503, ErrorCode.FEIGN_OPEN_STATE, "%s server is unavailable".formatted(resource)));
+            return Mono.error(new FeignServiceException(503, ErrorCode.FEIGN_OPEN_STATE, "%s service is unavailable".formatted(resource)));
         }
         if (error instanceof ReactiveFeignException rfe) {
             final var req = rfe.getRequest();
@@ -38,7 +38,7 @@ public abstract class CommonFallbackFactory<T> implements FallbackFactory<T> {
             } else if (cause instanceof OutOfRetriesException ore) {
                 log.warn("Error after reach of retry {}", ore.getMessage());
             }
-            return Mono.error(new FeignServiceException(503, "%s server is unavailable".formatted(resource)));
+            return Mono.error(new FeignServiceException(503, "%s service is unavailable".formatted(resource)));
         }
         if (error instanceof FeignException fe) {
             return Mono.error(new FeignServiceException(fe.status(), getFeignExceptionMsg(fe)));

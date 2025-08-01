@@ -1,12 +1,16 @@
 package com.keakimleang.bulkpayment.services;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch.core.IndexRequest;
 import com.keakimleang.bulkpayment.annotations.ReactiveTransaction;
 import com.keakimleang.bulkpayment.batches.BulkPaymentUploadValidator;
+import com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant;
 import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.RUN_ASYNC_FLOW;
 import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOADED_BULK_PAYMENT_CURRENCY;
 import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOADED_BULK_PAYMENT_ID;
 import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOADED_BULK_PAYMENT_SOURCE_ACCOUNT;
 import static com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant.UPLOAD_FILE;
+import com.keakimleang.bulkpayment.entities.BulkPaymentDataProdES;
 import com.keakimleang.bulkpayment.entities.BulkPaymentInfo;
 import com.keakimleang.bulkpayment.payloads.BulkPaymentJobFailedException;
 import com.keakimleang.bulkpayment.payloads.BulkPaymentServiceException;
@@ -52,6 +56,7 @@ public class BulkPaymentService {
 
     private final BulkPaymentRabbitMQService bulkPaymentRabbitMQService;
     private final BulkPaymentSchedulerService bulkPaymentSchedulerService;
+    private final ElasticsearchClient elasticsearchClient;
 
     public Mono<Long> upload(final Mono<BulkPaymentUploadRequest> requestMono) {
         return requestMono
@@ -337,5 +342,23 @@ public class BulkPaymentService {
 //        params.setCopyFirstRowCellStyle(true);
 //        return params;
 //    }
+
+    public void migrateDataToES() {
+        bulkPaymentDataProdRepository.findAll()
+                .flatMap(bulkPaymentDataProd -> Mono.fromCallable(() -> {
+                    final var bulkPaymentDataProdES = new BulkPaymentDataProdES(bulkPaymentDataProd);
+                    IndexRequest<BulkPaymentDataProdES> indexRequest = IndexRequest.of(i -> i
+                            .index(BulkPaymentConstant.BULK_PAYMENT_DATA_PROD)
+                            .id(bulkPaymentDataProdES.getId().toString())
+                            .document(bulkPaymentDataProdES));
+                    elasticsearchClient.index(indexRequest);
+                    log.info("Indexed batch upload prod with ID: {}", bulkPaymentDataProdES.getId());
+                    return bulkPaymentDataProdES;
+                }))
+                .subscribeOn(Schedulers.boundedElastic()) // Run on background thread
+                .doOnError(error -> log.error("Error during migration to Elasticsearch", error))
+                .doOnComplete(() -> log.info("Migration to Elasticsearch completed successfully"))
+                .subscribe(); // Trigger the execution
+    }
 
 }

@@ -22,6 +22,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 @Component
@@ -48,10 +49,14 @@ public class BulkPaymentUploadProcessor implements ItemProcessor<BulkPaymentData
         String errorMsg = validator.validateItem(item);
         boolean isValid = StringWrapperUtils.isBlank(errorMsg);
 
-        client.getUserById(1L)
-                .doOnNext(user -> log.info("User details: {}", user))
-                .doOnError(error -> log.error("Error fetching user details", error))
-                .subscribe();
+//        client.getUserById(1L)
+//                .doOnNext(user -> log.info("User details: {}", user))
+//                .onErrorResume(error -> {
+//                    log.error("Failed to fetch user details: {}", error.getMessage());
+//                    return Mono.just(Map.of("error", "User details not available"));
+//                })
+//                .doOnError(error -> log.error("Error fetching user details with message={}", error.getMessage()))
+//                .subscribe();
 
         if (isValid) {
             validRecords++;

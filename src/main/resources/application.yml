@@ -113,7 +113,9 @@ spring.data.redis:
       min-idle: 5
 
 spring.elasticsearch:
-  uris: ${ELASTIC_SEARCH_URI:http://localhost:9200}
+  host: ${ELASTIC_SEARCH_HOST:localhost}
+  port: ${ELASTIC_SEARCH_PORT:9200}
+  scheme: ${ELASTIC_SEARCH_SCHEME:http}
   username: ${ELASTIC_SEARCH_USERNAME:elastic}
   password: ${ELASTIC_SEARCH_PASSWORD:elastic}
 

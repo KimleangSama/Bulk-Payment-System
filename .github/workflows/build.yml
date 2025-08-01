@@ -21,6 +21,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+
+      - name: Cache Maven Packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('pom.xml', 'pom.xml') || github.sha }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Build with skip tests
+        run: mvn -B package --file pom.xml -DskipTests
       
       - name: Pull Docker Images
         run: docker compose -f docker-compose.yml pull
@@ -29,13 +39,6 @@ jobs:
         uses: hoverkraft-tech/compose-action@v2.3.0
         with:
           compose-file: "./docker-compose.yml"
-
-      - name: Cache Maven Packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('pom.xml', 'pom.xml') || github.sha }}
-          restore-keys: ${{ runner.os }}-m2
 
       - name: Build with Maven
         run: mvn -B package --file pom.xml

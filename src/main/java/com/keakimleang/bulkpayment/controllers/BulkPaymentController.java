@@ -28,7 +28,7 @@ import reactor.core.scheduler.Schedulers;
 public class BulkPaymentController {
     private final BulkPaymentService bulkPaymentService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    //    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResponseEntity<ApiResponse<Map<String, Long>>>> upload(
             @RequestPart("file") final Mono<FilePart> filePartMono,
@@ -68,6 +68,12 @@ public class BulkPaymentController {
     @PreAuthorize("hasRole('ADMIN')")
     public Mono<String> getAllBulkPaymentInfo() {
         return Mono.just("Bulk Payment Info for Admin");
+    }
+
+    @PostMapping("/migrate")
+    public Mono<String> migrate() {
+        bulkPaymentService.migrateDataToES();
+        return Mono.just("Migration started");
     }
 
 //    @GetMapping(value = "/{batchUploadId}/excel/export", produces = MediaTypeConstant.EXCEL)
