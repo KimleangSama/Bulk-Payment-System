@@ -56,6 +56,7 @@ public class BulkPaymentService {
 
     private final BulkPaymentRabbitMQService bulkPaymentRabbitMQService;
     private final BulkPaymentSchedulerService bulkPaymentSchedulerService;
+    private final DatabaseClient databaseClient;
     private final ElasticsearchClient elasticsearchClient;
 
     public Mono<Long> upload(final Mono<BulkPaymentUploadRequest> requestMono) {
@@ -154,6 +155,8 @@ public class BulkPaymentService {
                         "Bulk payment info not found with Id: " + bulkPaymentInfoId)))
                 .flatMap(bulkPaymentInfo -> validateStatus(bulkPaymentInfo, bulkPaymentInfoId)
                         .then(moveRecords(bulkPaymentInfoId))
+                        .flatMap(movedCount -> indexToES(bulkPaymentInfoId)
+                                .thenReturn(movedCount))
                         .flatMap(movedCount -> updateBulkPaymentInfo(bulkPaymentInfo, movedCount))
                         .flatMap(savedInfo -> scheduleOrSendImmediatelyForProcessing(savedInfo.getId(), savedInfo))
                 );
@@ -167,8 +170,6 @@ public class BulkPaymentService {
         }
         return Mono.empty();
     }
-
-    private final DatabaseClient databaseClient;
 
     private Mono<Long> moveRecords(Long bulkPaymentInfoId) {
         String sql = """
@@ -342,6 +343,31 @@ public class BulkPaymentService {
 //        params.setCopyFirstRowCellStyle(true);
 //        return params;
 //    }
+
+    private Mono<Long> indexToES(Long bulkPaymentInfoId) {
+        return bulkPaymentDataProdRepository.findByBulkPaymentInfoId(bulkPaymentInfoId)
+                .collectList()
+                .flatMap(records -> {
+                    if (records.isEmpty()) {
+                        return Mono.error(new BulkPaymentServiceException(
+                                "No records found for bulk payment info ID: " + bulkPaymentInfoId));
+                    }
+                    log.info("Count {}", records.size());
+                    return Mono.fromCallable(() -> {
+                        for (var record : records) {
+                            final var esRecord = new BulkPaymentDataProdES(record);
+                            IndexRequest<BulkPaymentDataProdES> indexRequest = IndexRequest.of(i -> i
+                                    .index(BulkPaymentConstant.BULK_PAYMENT_DATA_PROD)
+                                    .id(esRecord.getId().toString())
+                                    .document(esRecord));
+                            elasticsearchClient.index(indexRequest);
+                        }
+                        log.info("Indexed {} records to Elasticsearch for bulk payment info ID: {}", records.size(), bulkPaymentInfoId);
+                        return (long) records.size();
+                    });
+                })
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
     public void migrateDataToES() {
         bulkPaymentDataProdRepository.findAll()

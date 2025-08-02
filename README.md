@@ -13,6 +13,7 @@ How to show passwords in PostgreSQL:
 ```sql
 SELECT usename, passwd FROM pg_shadow WHERE passwd IS NOT NULL;
 ```
+Then replace userlist of pgbouncer with the output of the above query.
 
 ### Technologies Used
 

@@ -127,9 +127,9 @@ feign-client:
 bulk:
   payment:
     chunk:
-      size: 3
+      size: 25
     consumer:
-      concurrency: 3
+      concurrency: 25
     exchange:
       name: bulk-payment-exchange
     queue:

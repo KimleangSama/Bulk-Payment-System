@@ -145,14 +145,15 @@ public class BulkPaymentRabbitMQService {
     }
 
     private Mono<String> processRecord(BulkPaymentDataProd record) {
-        return webClient.get()
-                .uri("/posts/{id}", record.getId())
-                .retrieve()
-                .bodyToMono(String.class)
-                .timeout(Duration.ofSeconds(10))
-                .retryWhen(Retry.backoff(3, Duration.ofMillis(500)).maxBackoff(Duration.ofSeconds(5)))
-                .flatMap(result -> updateBulkPaymentDataStatus(record, SUCCESS, null).thenReturn(SUCCESS))
-                .onErrorResume(e -> handleError(record, e));
+//        return webClient.get()
+//                .uri("/posts/{id}", record.getId())
+//                .retrieve()
+//                .bodyToMono(String.class)
+//                .timeout(Duration.ofSeconds(10))
+//                .retryWhen(Retry.backoff(3, Duration.ofMillis(500)).maxBackoff(Duration.ofSeconds(5)))
+//                .flatMap(result -> updateBulkPaymentDataStatus(record, SUCCESS, null).thenReturn(SUCCESS))
+//                .onErrorResume(e -> handleError(record, e));
+        return Mono.just("SUCCESS"); // Placeholder for actual processing logic
     }
 
     private Mono<String> handleError(BulkPaymentDataProd record, Throwable e) {
@@ -192,7 +193,6 @@ public class BulkPaymentRabbitMQService {
     private Mono<Void> updateBulkPaymentInfoStatus(Long bulkPaymentInfoId, List<String> statuses) {
         long failed = statuses.stream().filter(s -> !SUCCESS.equals(s)).count();
         String status = failed == 0 ? "COMPLETED" : "FAILED";
-
         return bulkPaymentInfoRepository.findById(bulkPaymentInfoId)
                 .flatMap(info -> {
                     info.setStatus(ProcessingStatus.valueOf(status));
