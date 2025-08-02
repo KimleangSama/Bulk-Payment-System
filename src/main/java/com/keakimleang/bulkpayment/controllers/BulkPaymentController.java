@@ -60,8 +60,14 @@ public class BulkPaymentController {
 
     @PostMapping(value = "{bulkPaymentInfoId}/confirm")
     public Mono<ResponseEntity<ApiResponse<Map<String, Long>>>> confirm(@PathVariable("bulkPaymentInfoId") final Long bulkPaymentInfoId) {
-        return bulkPaymentService.confirm(bulkPaymentInfoId)
-                .map(data -> ResponseEntity.ok(ApiResponse.cratedResourceResponse(data, "Bulk payment confirmed successfully!")));
+        bulkPaymentService.confirm(bulkPaymentInfoId)
+                .subscribeOn(Schedulers.boundedElastic())
+                .doOnError(error -> log.error("Error during bulk payment confirmation", error))
+                .subscribe();
+        // Manually subscribe to trigger the processing and return a response immediately
+        return Mono.just(ResponseEntity.ok(
+                ApiResponse.cratedResourceResponse(
+                        bulkPaymentInfoId, "Bulk payment confirmed successfully!")));
     }
 
     @GetMapping("/admin")

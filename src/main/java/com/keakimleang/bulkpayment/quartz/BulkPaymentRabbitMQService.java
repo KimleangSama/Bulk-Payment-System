@@ -1,8 +1,13 @@
 package com.keakimleang.bulkpayment.quartz;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch.core.IndexRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.keakimleang.bulkpayment.batches.consts.BulkPaymentConstant;
 import com.keakimleang.bulkpayment.config.props.RabbitMQProperties;
 import com.keakimleang.bulkpayment.entities.BulkPaymentDataProd;
+import com.keakimleang.bulkpayment.entities.BulkPaymentDataProdES;
 import com.keakimleang.bulkpayment.payloads.ProcessingStatus;
 import com.keakimleang.bulkpayment.repos.BulkPaymentDataProdRepository;
 import com.keakimleang.bulkpayment.repos.BulkPaymentInfoRepository;
@@ -10,7 +15,7 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Delivery;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
-import java.time.Duration;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +38,6 @@ import reactor.rabbitmq.Receiver;
 import reactor.rabbitmq.ReceiverOptions;
 import reactor.rabbitmq.Sender;
 import reactor.rabbitmq.SenderOptions;
-import reactor.util.retry.Retry;
 
 @Slf4j
 @Service
@@ -44,6 +48,7 @@ public class BulkPaymentRabbitMQService {
     private static final String FAIL = "FAIL";
 
     private final WebClient webClient;
+    private final ElasticsearchClient elasticsearchClient;
     private final ObjectMapper objectMapper;
     private final RabbitMQProperties rabbitMQProperties;
     private final BulkPaymentInfoRepository bulkPaymentInfoRepository;
@@ -153,7 +158,8 @@ public class BulkPaymentRabbitMQService {
 //                .retryWhen(Retry.backoff(3, Duration.ofMillis(500)).maxBackoff(Duration.ofSeconds(5)))
 //                .flatMap(result -> updateBulkPaymentDataStatus(record, SUCCESS, null).thenReturn(SUCCESS))
 //                .onErrorResume(e -> handleError(record, e));
-        return Mono.just("SUCCESS"); // Placeholder for actual processing logic
+//        return updateBulkPaymentDataProdStatus(record, "FAIL", "Mock failed data").thenReturn("FAIL");
+        return Mono.just("SUCCESS");
     }
 
     private Mono<String> handleError(BulkPaymentDataProd record, Throwable e) {
@@ -179,14 +185,25 @@ public class BulkPaymentRabbitMQService {
             }
         }
         log.error("Process failed | recordId={} | status={} | reason={}", record.getId(), status, failureReason, cause);
-        return updateBulkPaymentDataStatus(record, status, failureReason).thenReturn(status);
+        return updateBulkPaymentDataProdStatus(record, status, failureReason).thenReturn(status);
     }
 
-    private Mono<BulkPaymentDataProd> updateBulkPaymentDataStatus(BulkPaymentDataProd record, String status, String failureReason) {
+    private Mono<BulkPaymentDataProd> updateBulkPaymentDataProdStatus(BulkPaymentDataProd record, String status, String failureReason) {
         record.setStatus(status);
         record.setUpdatedAt(LocalDateTime.now());
         record.setExecutedAt(LocalDateTime.now());
         record.setFailureReason(SUCCESS.equals(status) ? null : failureReason);
+        log.info("Updating bulk payment status for record: {}", record);
+        try {
+            final var bulkPaymentDataProdES = new BulkPaymentDataProdES(record);
+            IndexRequest<BulkPaymentDataProdES> indexRequest = IndexRequest.of(i -> i
+                    .index(BulkPaymentConstant.BULK_PAYMENT_DATA_PROD)
+                    .id(bulkPaymentDataProdES.getId().toString())
+                    .document(bulkPaymentDataProdES));
+            elasticsearchClient.index(indexRequest);
+        } catch (IOException | ElasticsearchException e) {
+            log.error("Failed to index record in Elasticsearch | id={} | error={}", record.getId(), e.getMessage(), e);
+        }
         return bulkPaymentDataProdRepository.save(record);
     }
 

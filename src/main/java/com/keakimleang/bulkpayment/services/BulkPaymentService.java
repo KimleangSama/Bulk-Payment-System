@@ -149,7 +149,7 @@ public class BulkPaymentService {
     }
 
     @ReactiveTransaction
-    public Mono<Long> confirm(Long bulkPaymentInfoId) {
+    public Mono<Void> confirm(Long bulkPaymentInfoId) {
         return bulkPaymentInfoRepository.findById(bulkPaymentInfoId)
                 .switchIfEmpty(Mono.error(new BulkPaymentServiceException(
                         "Bulk payment info not found with Id: " + bulkPaymentInfoId)))
@@ -159,7 +159,8 @@ public class BulkPaymentService {
                                 .thenReturn(movedCount))
                         .flatMap(movedCount -> updateBulkPaymentInfo(bulkPaymentInfo, movedCount))
                         .flatMap(savedInfo -> scheduleOrSendImmediatelyForProcessing(savedInfo.getId(), savedInfo))
-                );
+                )
+                .then();
     }
 
     private Mono<Void> validateStatus(BulkPaymentInfo info, Long id) {
@@ -352,7 +353,6 @@ public class BulkPaymentService {
                         return Mono.error(new BulkPaymentServiceException(
                                 "No records found for bulk payment info ID: " + bulkPaymentInfoId));
                     }
-                    log.info("Count {}", records.size());
                     return Mono.fromCallable(() -> {
                         for (var record : records) {
                             final var esRecord = new BulkPaymentDataProdES(record);
