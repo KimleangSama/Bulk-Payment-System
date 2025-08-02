@@ -34,3 +34,7 @@ CREATE TABLE roles_permissions
     permission_id INT NOT NULL REFERENCES permissions (id) ON DELETE CASCADE,
     PRIMARY KEY (role_id, permission_id)
 );
+
+INSERT INTO roles (name) VALUES
+('USER'),
+('ADMIN');

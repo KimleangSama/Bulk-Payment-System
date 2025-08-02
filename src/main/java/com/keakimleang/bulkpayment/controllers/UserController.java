@@ -4,11 +4,17 @@ import com.keakimleang.bulkpayment.config.handlers.ReactiveWebSocketHandler;
 import com.keakimleang.bulkpayment.payloads.UserSingleSession;
 import com.keakimleang.bulkpayment.payloads.requests.AuthRequest;
 import com.keakimleang.bulkpayment.repos.UserRepository;
+import com.keakimleang.bulkpayment.repos.UserRoleRepository;
 import com.keakimleang.bulkpayment.securities.CustomReactiveUserDetailsService;
 import com.keakimleang.bulkpayment.securities.CustomUserDetails;
 import com.keakimleang.bulkpayment.securities.User;
+import com.keakimleang.bulkpayment.securities.UserRole;
 import com.keakimleang.bulkpayment.utils.TokenUtil;
+
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -30,6 +36,7 @@ import reactor.core.publisher.Mono;
 public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final CustomReactiveUserDetailsService userDetailsService;
     private final ReactiveAuthenticationManager authenticationManager;
     private final TokenUtil tokenUtil;
@@ -42,7 +49,12 @@ public class UserController {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         return userRepository.save(user)
                 .doOnSuccess(savedUser -> log.info("User registered successfully: {}", savedUser.getUsername()))
-                .then();
+                .flatMap(savedUser -> {
+                    List<UserRole> userRoles = new ArrayList<>();
+                    userRoles.add(new UserRole(savedUser.getId(), 1L)); // Assuming role ID 1 is for user
+                    userRoles.add(new UserRole(savedUser.getId(), 2L)); // Assuming role ID 2 is for admin
+                    return userRoleRepository.saveAll(userRoles).then();
+                });
     }
 
     @PostMapping("/login")
