@@ -50,7 +50,6 @@ public class BulkPaymentController {
             request.setEffectiveAt(LocalDateTime.parse(tuple.getT4()));
             return request;
         });
-
         return bulkPaymentService
                 .upload(Mono.zip(filePartMono, requestMono)
                         .map(tuple -> new BulkPaymentUploadRequest(tuple.getT1(), tuple.getT2(), false)))
