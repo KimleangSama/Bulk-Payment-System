@@ -31,10 +31,13 @@ jobs:
 
       - name: Build with skip tests
         run: mvn -B package --file pom.xml -DskipTests
-      
-      - name: Pull Docker Images
-        run: docker compose -f docker-compose.yml pull
         
+      - name: Run Docker-Compose Test
+        uses: hoverkraft-tech/compose-action@v2.3.0
+        with:
+          compose-file: "./docker-compose-test.yml"
+          services-log-level: "info"
+
       - name: Run Docker-Compose
         uses: hoverkraft-tech/compose-action@v2.3.0
         with:
