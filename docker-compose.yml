@@ -59,7 +59,7 @@ services:
       - "9200:9200"
       - "9300:9300"
     volumes:
-      - ./docker/elk/es.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+      - ./docker/elk/es.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
       - ./data/elasticsearch:/usr/share/elasticsearch/data
     environment:
       node.name: elasticsearch
@@ -74,7 +74,7 @@ services:
       http.cors.allow-credentials: true
       xpack.security.enabled: true
     healthcheck:
-      test: [ 'CMD', 'curl', '-f', 'http://localhost:9200', '-u', 'elastic:elastic' ]
+      test: ["CMD", "curl", "-f", "-u", "elastic:elastic", "http://localhost:9200"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -82,8 +82,8 @@ services:
     image: elastic/logstash:9.0.3
     container_name: logstash
     volumes:
-      - ./docker/elk/logstash.yml:/usr/share/logstash/config/logstash.yml:ro,Z
-      - ./docker/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro,Z
+      - ./docker/elk/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./docker/elk/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
     ports:
       - "5044:5044"
       - "9600:9600"
