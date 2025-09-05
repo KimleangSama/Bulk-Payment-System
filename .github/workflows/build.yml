@@ -36,13 +36,6 @@ jobs:
         uses: hoverkraft-tech/compose-action@v2.3.0
         with:
           compose-file: "./docker-compose-test.yml"
-          services-log-level: "info"
-
-      - name: Run Docker-Compose
-        uses: hoverkraft-tech/compose-action@v2.3.0
-        with:
-          compose-file: "./docker-compose.yml"
-          services-log-level: "info"
 
       - name: Build with Maven
         run: mvn -B package --file pom.xml
