@@ -33,7 +33,7 @@ jobs:
         run: mvn -B package --file pom.xml -DskipTests
         
       - name: Run Docker-Compose Test
-        uses: hoverkraft-tech/compose-action@v2.3.0
+        uses: hoverkraft-tech/compose-action@v2.4.0
         with:
           compose-file: "./docker-compose-test.yml"
 
